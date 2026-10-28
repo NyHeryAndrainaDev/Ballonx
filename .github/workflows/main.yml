@@ -1,0 +1,38 @@
+
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Décompresser le projet
+        run: unzip -q ./*.zip -d projet
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Tests du jeu
+        working-directory: projet
+        run: |
+          pip install -r requirements.txt
+          python -m unittest discover -s tests
+      - name: Construire l'APK
+        working-directory: projet/android
+        run: gradle assembleDebug --stacktrace -Dorg.gradle.jvmargs="-Xmx3g"
+      - name: Taille de l'APK
+        run: ls -lh projet/android/app/build/outputs/apk/debug/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BalloonX-debug-apk
+          path: projet/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
